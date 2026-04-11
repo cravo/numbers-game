@@ -1,0 +1,77 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #101010;
+    color: #e1e1e1;
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+}
+
+.spin-counter
+{
+    display: inline-block;
+    margin: 5px;
+    font-size: 24px;
+    border-radius: 5px;
+    color: white;
+    background-color: #b30000;
+    padding: 10px 20px;
+}
+
+.number
+{
+    display: inline-block;
+    width: 64px;
+    height: 64px;
+    line-height: 64px;
+    text-align: center;
+    margin: 5px;
+    font-size: 40px;
+    font-weight: bold;
+    border-radius: 5px;
+    color: white;
+    background-color: lightgray;
+}
+
+.big-number {
+    width: 120px;
+    height: 120px;
+    line-height: 120px;
+    font-size: 80px;
+    font-weight: bold;
+    margin: 20px 0;
+}
+
+.not-collected {
+    opacity: 0.25;
+}
+
+.spin-button {
+    padding: 10px 20px;
+    font-size: 40px;
+    font-weight: bold;
+    background-color: #b30000;
+    color: white;
+    border: 2px solid #b30000;
+    border-radius: 5px;
+    cursor: pointer;
+    animation: borderPulse 2s infinite;
+}
+
+.disabled-button {
+    background-color: #555;
+    border-color: #555;
+    cursor: not-allowed;
+    animation: none;
+}
+
+@keyframes borderPulse {
+    0%, 100% {
+        border-color: #ffa600;
+        box-shadow: 0 0 5px #ffa600;
+    }
+    50% {
+        border-color: #b30000;
+        box-shadow: 0 0 15px rgba(179, 0, 0, 0.8);
+    }
+}
