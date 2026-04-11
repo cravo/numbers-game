@@ -14,7 +14,7 @@ let rarityColors = {
 
 let numbers = {
     common: [],
-    uncommon: [22, 33, 44, 55, 66, 77, 88, 99, 10, 20, 30, 40, 50, 60, 70, 80, 90],
+    uncommon: [22, 33, 44, 55, 66, 77, 88, 10, 20, 30, 40, 50, 60, 70, 90],
     rare: [69, 78, 80, 29, 15, 27, 23, 2, 3, 5, 7, 11, 13, 17, 19, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97],
     legendary: [0, 42, 99]
 };
@@ -142,6 +142,9 @@ function checkForDuplicates() {
     let uniqueNumbers = new Set(allNumbers);
     if (uniqueNumbers.size !== allNumbers.length) {
         console.error("Duplicate numbers found in rarity lists!");
+        // output duplicates for debugging
+        let duplicates = allNumbers.filter((item, index) => allNumbers.indexOf(item) !== index);
+        console.error("Duplicates: ", duplicates);
     }
 }
 
