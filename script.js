@@ -22,13 +22,24 @@ let numbers = {
 let playerData = {
     numbersCollected: [],
     totalSpins: 0,
+    lastSpinDay: null,
     lastSpinTime: null,
     spinsRemainingToday: 0
 }
 
 let spinAnimationCounter = 0;
 
+let maxSpinsPerDay = 5;
+
+function getLocalDayKey(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
 function populateCommonNumbers() {
+    numbers.common = [];
     for (let i = 0; i <= 99; i++) {
         if (!numbers.uncommon.includes(i) && !numbers.rare.includes(i) && !numbers.legendary.includes(i)) {
             numbers.common.push(i);
@@ -39,8 +50,9 @@ function populateCommonNumbers() {
 function getRandomRarity() {
     let rand = Math.random();
     let cumulative = 0;
-    for (let rarity in rarities) {
-        cumulative += rarities[rarity];
+    const rarityEntries = Object.entries(rarities);
+    for (const [rarity, weight] of rarityEntries) {
+        cumulative += weight;
         if (rand < cumulative) {
             return rarity;
         }
@@ -63,7 +75,7 @@ function getNumberRarity(number) {
 }
 
 function collectionComplete() {
-    return playerData.numbersCollected.length === 100;
+    return new Set(playerData.numbersCollected.filter(num => Number.isInteger(num) && num >= 0 && num <= 99)).size === 100;
 }
 
 function collectNumber(number) {
@@ -92,6 +104,7 @@ function spinAnimation() {
     }
     else
     {
+        playerData.lastSpinDay = getLocalDayKey();
         playerData.lastSpinTime = new Date().toISOString();
 
         let collectedNumber = getRandomNumber();
@@ -99,19 +112,16 @@ function spinAnimation() {
         document.getElementById("spinner").textContent = collectedNumber < 10 ? "0" + collectedNumber : collectedNumber;
         document.getElementById("spinner").style.backgroundColor = rarityColors[getNumberRarity(collectedNumber).toLowerCase().replace("!", "")];
 
-        if (hasCollected(collectedNumber)) {
-            // dupe, do not add to collection
-            document.getElementById("currentNumber").textContent = "Current Number: " + collectedNumber + " DUPE!";
-            return;
-        }
+        if (!hasCollected(collectedNumber)) {
+            collectNumber(collectedNumber);
 
-        collectNumber(collectedNumber);
+            if (collectionComplete()) {
+                alert("Congratulations! You have collected all the numbers!");
+            }
+        }
 
         savePlayerData();
-
-        if (collectionComplete()) {
-            alert("Congratulations! You have collected all the numbers!");
-        }
+        updateCollectButtonState();
     }
 }
 
@@ -141,22 +151,42 @@ function createNumberGrid() {
 function checkForDuplicates() {
     let allNumbers = [...numbers.common, ...numbers.uncommon, ...numbers.rare, ...numbers.legendary];
     let uniqueNumbers = new Set(allNumbers);
+    let hasError = false;
+
     if (uniqueNumbers.size !== allNumbers.length) {
+        hasError = true;
         console.error("Duplicate numbers found in rarity lists!");
         // output duplicates for debugging
         let duplicates = allNumbers.filter((item, index) => allNumbers.indexOf(item) !== index);
         console.error("Duplicates: ", duplicates);
     }
+
+    const invalidNumbers = allNumbers.filter(num => !Number.isInteger(num) || num < 0 || num > 99);
+    if (invalidNumbers.length > 0) {
+        hasError = true;
+        console.error("Out-of-range numbers found in rarity lists:", invalidNumbers);
+    }
+
+    const missingNumbers = [];
+    for (let i = 0; i <= 99; i++) {
+        if (!uniqueNumbers.has(i)) {
+            missingNumbers.push(i);
+        }
+    }
+    if (missingNumbers.length > 0) {
+        hasError = true;
+        console.error("Missing numbers in rarity lists:", missingNumbers);
+    }
+
+    return !hasError;
 }
 
 function spunToday() {
-    if(!playerData.lastSpinTime) {
+    if (!playerData.lastSpinDay) {
         return false;
     }
 
-    const lastSpinDate = new Date(playerData.lastSpinTime);
-    const now = new Date();
-    return lastSpinDate.toDateString() === now.toDateString();
+    return playerData.lastSpinDay === getLocalDayKey();
 }
 
 function canSpin() {
@@ -182,7 +212,79 @@ function savePlayerData() {
 function loadPlayerData() {
     const data = localStorage.getItem("numbersGamePlayerData");
     if (data) {
-        playerData = JSON.parse(data);
+        try {
+            const loadedData = JSON.parse(data);
+
+            // validate loaded data
+            if (!loadedData.numbersCollected || !Array.isArray(loadedData.numbersCollected)) {
+                throw new Error("Invalid numbersCollected data");
+            }
+
+            let normalizedSpinsRemaining = Number(loadedData.spinsRemainingToday);
+            if (!Number.isInteger(normalizedSpinsRemaining) || normalizedSpinsRemaining < 0 || normalizedSpinsRemaining > maxSpinsPerDay) {
+                normalizedSpinsRemaining = 0;
+            }
+
+            // rebuild numbersCollected as unique integers to prevent tampering or corruption
+            const normalizedNumbersCollected = [...new Set(loadedData.numbersCollected)].filter(num => Number.isInteger(num) && num >= 0 && num <= 99);
+
+            let normalizedTotalSpins = Number(loadedData.totalSpins);
+            if (!Number.isInteger(normalizedTotalSpins) || normalizedTotalSpins < 0) {
+                normalizedTotalSpins = 0;
+            }
+
+            let normalizedLastSpinDay = null;
+            if (typeof loadedData.lastSpinDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(loadedData.lastSpinDay)) {
+                normalizedLastSpinDay = loadedData.lastSpinDay;
+            } else if (loadedData.lastSpinTime) {
+                const parsedLastSpin = new Date(loadedData.lastSpinTime);
+                if (!Number.isNaN(parsedLastSpin.getTime())) {
+                    normalizedLastSpinDay = getLocalDayKey(parsedLastSpin);
+                }
+            }
+
+            playerData = {
+                numbersCollected: normalizedNumbersCollected,
+                totalSpins: normalizedTotalSpins,
+                lastSpinDay: normalizedLastSpinDay,
+                lastSpinTime: loadedData.lastSpinTime || null,
+                spinsRemainingToday: normalizedSpinsRemaining
+            };
+
+        } catch (e) {
+            console.error("Error parsing player data from localStorage, resetting data.", e);
+            playerData = {
+                numbersCollected: [],
+                totalSpins: 0,
+                lastSpinDay: null,
+                lastSpinTime: null,
+                spinsRemainingToday: 0
+            };
+        }
+    }
+}
+
+function updateTotalSpins() {
+    document.getElementById("spins").textContent = "TOTAL SPINS: " + playerData.totalSpins;
+}
+
+function updateCollectButtonState() {
+    const collectButton = document.getElementById("collectButton");
+
+    const isOutOfSpins = playerData.spinsRemainingToday <= 0;
+    const isSpinAnimating = spinAnimationCounter > 0;
+    const isComplete = collectionComplete();
+
+    const shouldDisable = isOutOfSpins || isSpinAnimating || isComplete;
+    collectButton.disabled = shouldDisable;
+    collectButton.classList.toggle("disabled-button", shouldDisable);
+
+    if (isComplete) {
+        collectButton.textContent = "COLLECTION COMPLETE!";
+    } else if (isOutOfSpins) {
+        collectButton.textContent = "COME BACK TOMORROW!";
+    } else {
+        collectButton.textContent = "SPIN FOR A NUMBER!";
     }
 }
 
@@ -195,40 +297,40 @@ loadPlayerData();
 
 // if player hasn't spun today, reset spinsRemainingToday
 if(!spunToday()) {
-    playerData.spinsRemainingToday = 1 + Math.floor(Math.random() * 5); // 1-5 spins per day
+    playerData.lastSpinDay = getLocalDayKey();
+    playerData.spinsRemainingToday = 1 + Math.floor(Math.random() * maxSpinsPerDay); // 1-maxSpinsPerDay spins per day
     savePlayerData();
 }
 
 populateCommonNumbers();
-checkForDuplicates();
+if (!checkForDuplicates()) {
+    const collectButton = document.getElementById("collectButton");
+    collectButton.disabled = true;
+    collectButton.classList.add("disabled-button");
+    collectButton.textContent = "CONFIG ERROR";
+    throw new Error("Invalid number rarity configuration. Check console errors.");
+}
 createNumberGrid();
 updateSpinsRemaining();
+updateTotalSpins();
+updateCollectButtonState();
 
-if(playerData.spinsRemainingToday <= 0) {
-    document.getElementById("collectButton").classList.add("disabled-button");
-    document.getElementById("collectButton").textContent = "COME BACK TOMORROW!";
-}
-else {
-    document.getElementById("collectButton").addEventListener("click", () => {
-        if(canSpin()) {
-            playerData.spinsRemainingToday--;
+document.getElementById("collectButton").addEventListener("click", () => {
+    if (!canSpin()) {
+        updateCollectButtonState();
+        return;
+    }
 
-            updateSpinsRemaining();
+    // Mark today's allowance as consumed before animation to prevent reload exploits.
+    playerData.lastSpinDay = getLocalDayKey();
+    playerData.lastSpinTime = new Date().toISOString();
+    playerData.spinsRemainingToday--;
+    savePlayerData();
 
-            document.getElementById("collectButton").classList.add("disabled-button");
+    updateSpinsRemaining();
 
-            spinForNumber();
-
-            savePlayerData();
-
-            if(playerData.spinsRemainingToday <= 0) {
-                document.getElementById("collectButton").textContent = "COME BACK TOMORROW!";
-            }
-            else
-            {
-                document.getElementById("collectButton").classList.remove("disabled-button");
-            }
-        }});
-}
+    spinForNumber();
+    updateCollectButtonState();
+});
 
 
