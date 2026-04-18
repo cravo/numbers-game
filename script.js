@@ -22,7 +22,8 @@ let numbers = {
 let playerData = {
     numbersCollected: [],
     totalSpins: 0,
-    lastSpinTime: null
+    lastSpinTime: null,
+    spinsRemainingToday: 0
 }
 
 let spinAnimationCounter = 0;
@@ -116,7 +117,7 @@ function spinAnimation() {
 
 function spinForNumber() {  
     playerData.totalSpins++;
-    document.getElementById("spins").textContent = "SPINS: " + playerData.totalSpins;
+    document.getElementById("spins").textContent = "TOTAL SPINS: " + playerData.totalSpins;
 
     spinAnimationCounter = 200;
     requestAnimationFrame(spinAnimation);
@@ -167,7 +168,7 @@ function canSpin() {
         return false;
     }
 
-    if(spunToday()) {
+    if(playerData.spinsRemainingToday <= 0) {
         return false;
     }
 
@@ -185,28 +186,48 @@ function loadPlayerData() {
     }
 }
 
+function updateSpinsRemaining() {
+    document.getElementById("spinsRemaining").textContent = "SPINS REMAINING TODAY: " + playerData.spinsRemainingToday;
+}
+
 window.addEventListener("beforeunload", savePlayerData);
 loadPlayerData();
+
+// if player hasn't spun today, reset spinsRemainingToday
+if(!spunToday()) {
+    playerData.spinsRemainingToday = 1 + Math.floor(Math.random() * 5); // 1-5 spins per day
+    savePlayerData();
+}
 
 populateCommonNumbers();
 checkForDuplicates();
 createNumberGrid();
+updateSpinsRemaining();
 
-if(spunToday()) {
+if(playerData.spinsRemainingToday <= 0) {
     document.getElementById("collectButton").classList.add("disabled-button");
     document.getElementById("collectButton").textContent = "COME BACK TOMORROW!";
 }
 else {
     document.getElementById("collectButton").addEventListener("click", () => {
         if(canSpin()) {
-            
+            playerData.spinsRemainingToday--;
+
+            updateSpinsRemaining();
+
             document.getElementById("collectButton").classList.add("disabled-button");
 
             spinForNumber();
 
             savePlayerData();
 
-            document.getElementById("collectButton").textContent = "COME BACK TOMORROW!";
+            if(playerData.spinsRemainingToday <= 0) {
+                document.getElementById("collectButton").textContent = "COME BACK TOMORROW!";
+            }
+            else
+            {
+                document.getElementById("collectButton").classList.remove("disabled-button");
+            }
         }});
 }
 

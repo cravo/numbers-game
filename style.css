@@ -18,6 +18,17 @@ body {
     padding: 10px 20px;
 }
 
+.spin-remaining
+{
+    display: inline-block;
+    margin: 5px;
+    font-size: 24px;
+    border-radius: 5px;
+    color: white;
+    background-color: #b38000;
+    padding: 10px 20px;
+}
+
 .number
 {
     display: inline-block;
