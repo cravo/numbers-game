@@ -2,10 +2,22 @@
 
 [![CI](https://github.com/cravo/numbers-game/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/cravo/numbers-game/actions/workflows/ci.yml?query=branch%3Amain)
 
+A game where you have to collect all the numbers from 0 to 99.  You get between 1 and 5 spins per day, and some numbers are more rare than others.  Can you collect them all?
+
+
+The game uses localstorage for saving progress and should be hardened against cheating, but if someone cheats, they're only cheating themselves :-)
+
+
+
 Simple Flask app served with Gunicorn and containerized with Docker Compose.
+
 
 ## Features
 
+- Spin for numbers!
+- Collect numbers!
+- Come back every day!
+- Can you collect them all?
 - Production WSGI server with Gunicorn
 - Docker Compose service with healthcheck
 - Resource and log safety limits
