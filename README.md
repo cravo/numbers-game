@@ -1,6 +1,6 @@
 # Numbers Game
 
-[![CI](https://github.com/cravo/numbers-game/actions/workflows/ci.yml/badge.svg)](https://github.com/cravo/numbers-game/actions/workflows/ci.yml)
+[![CI](https://github.com/cravo/numbers-game/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/cravo/numbers-game/actions/workflows/ci.yml?query=branch%3Amain)
 
 Simple Flask app served with Gunicorn and containerized with Docker Compose.
 
