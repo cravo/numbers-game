@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  docker-compose-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and start services
+        run: docker compose up -d --build
+
+      - name: Wait for healthcheck
+        run: |
+          for i in {1..45}; do
+            status="$(docker inspect --format='{{.State.Health.Status}}' numbers-game-server 2>/dev/null || true)"
+            echo "Health status: ${status}"
+            if [ "${status}" = "healthy" ]; then
+              exit 0
+            fi
+            if [ "${status}" = "unhealthy" ]; then
+              echo "Container reported unhealthy"
+              docker compose logs --tail 200
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "Timed out waiting for healthy status"
+          docker compose ps
+          docker compose logs --tail 200
+          exit 1
+
+      - name: Smoke test
+        run: |
+          curl --fail --silent --show-error http://localhost:3210 > /dev/null
+          echo "Smoke test passed"
+
+      - name: Print logs on failure
+        if: failure()
+        run: docker compose logs --tail 300
+
+      - name: Shut down services
+        if: always()
+        run: docker compose down --volumes --remove-orphans
